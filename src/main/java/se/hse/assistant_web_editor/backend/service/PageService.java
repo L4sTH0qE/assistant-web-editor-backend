@@ -27,6 +27,7 @@ public class PageService {
     private final PageRepository pageRepository;
     private final PageVersionRepository versionRepository;
     private final UserRepository userRepository;
+    private final PageVersionRepository pageVersionRepository;
 
     public List<PageDto> getAllPages(String username) {
         return pageRepository.findAll().stream()
@@ -69,6 +70,7 @@ public class PageService {
         if (!pageRepository.existsById(pageId)) {
             throw new ResourceNotFoundException("Page not found with id: " + pageId);
         }
+        pageVersionRepository.deleteAllByPageId(pageId);
         pageRepository.deleteById(pageId);
     }
 

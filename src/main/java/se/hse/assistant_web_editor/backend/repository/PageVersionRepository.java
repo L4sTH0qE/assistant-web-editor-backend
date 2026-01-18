@@ -14,4 +14,6 @@ public interface PageVersionRepository extends JpaRepository<PageVersionEntity, 
     Optional<Integer> findMaxVersionByPageId(Long pageId);
 
     Optional<PageVersionEntity> findFirstByPageIdOrderByVersionNumberDesc(Long pageId);
+
+    void deleteAllByPageId(Long pageId);
 }
