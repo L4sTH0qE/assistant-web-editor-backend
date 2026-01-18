@@ -11,6 +11,7 @@ public class PageDto {
     private Long id;
     private String title;
     private String slug;
+    private PageType type;
     private String ownerName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

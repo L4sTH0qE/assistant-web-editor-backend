@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import se.hse.assistant_web_editor.backend.dto.PageType;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +31,10 @@ public class PageEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private UserEntity owner;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PageType type;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

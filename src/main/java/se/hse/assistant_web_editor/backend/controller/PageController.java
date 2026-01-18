@@ -5,10 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import se.hse.assistant_web_editor.backend.dto.CreatePageRequest;
-import se.hse.assistant_web_editor.backend.dto.PageDetailDto;
-import se.hse.assistant_web_editor.backend.dto.PageDto;
-import se.hse.assistant_web_editor.backend.dto.SaveVersionRequest;
+import se.hse.assistant_web_editor.backend.dto.*;
 import se.hse.assistant_web_editor.backend.service.HtmlExportService;
 import se.hse.assistant_web_editor.backend.service.PageService;
 
@@ -23,35 +20,41 @@ public class PageController {
     private final HtmlExportService htmlExportService;
 
     @GetMapping
-    public ResponseEntity<List<PageDto>> getAll(@AuthenticationPrincipal UserDetails user) {
+    public ResponseEntity<List<PageDto>> getPages(@AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.ok(pageService.getAllPages(user.getUsername()));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<PageDto>> getAllByUser(@AuthenticationPrincipal UserDetails user) {
+    public ResponseEntity<List<PageDto>> getUserPages(@AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.ok(pageService.getAllUserPages(user.getUsername()));
     }
 
     @PostMapping
-    public ResponseEntity<PageDto> create(@RequestBody CreatePageRequest request,
+    public ResponseEntity<PageDto> createPage(@RequestBody CreatePageRequest request,
                                           @AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.ok(pageService.createPage(request, user.getUsername()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PageDetailDto> getOne(@PathVariable Long id) {
+    public ResponseEntity<PageDetailDto> getPage(@PathVariable Long id) {
         return ResponseEntity.ok(pageService.getPageDetails(id));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deletePage(@PathVariable Long id) {
+        pageService.deletePage(id);
+        return ResponseEntity.ok("Deleted");
+    }
+
     @PostMapping("/{id}/save")
-    public ResponseEntity<String> saveVersion(@PathVariable Long id,
+    public ResponseEntity<String> savePageVersion(@PathVariable Long id,
                                               @RequestBody SaveVersionRequest request) {
         pageService.savePageVersion(id, request);
         return ResponseEntity.ok("Saved");
     }
 
     @GetMapping("/{id}/export")
-    public ResponseEntity<String> export(@PathVariable Long id) {
-        return ResponseEntity.ok(htmlExportService.exportHtml(id));
+    public ResponseEntity<List<ExportBlockDto>> exportFragments(@PathVariable Long id) {
+        return ResponseEntity.ok(htmlExportService.exportBlocks(id));
     }
 }

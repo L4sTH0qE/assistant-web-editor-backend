@@ -2,6 +2,7 @@ package se.hse.assistant_web_editor.backend.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +17,7 @@ import se.hse.assistant_web_editor.backend.service.AuthService;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Log4j2
 public class AuthController {
 
     private final AuthService authService;
@@ -32,6 +34,7 @@ public class AuthController {
         }
 
         AuthResponse authResponse = authService.register(request);
+        log.warn("Register {}", authResponse.success());
         if (authResponse.success()) {
             return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
         } else {
@@ -51,6 +54,7 @@ public class AuthController {
         }
 
         AuthResponse authResponse = authService.authenticate(request);
+        log.warn("Login {}", authResponse.success());
         if (authResponse.success()) {
             return ResponseEntity.ok(authResponse);
         } else {

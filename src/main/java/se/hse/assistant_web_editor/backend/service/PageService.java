@@ -53,6 +53,7 @@ public class PageService {
         PageEntity page = PageEntity.builder()
                 .title(request.getTitle())
                 .slug(request.getSlug())
+                .type(request.getType())
                 .owner(owner)
                 .build();
 
@@ -61,6 +62,14 @@ public class PageService {
         createVersion(page, List.of(), 1);
 
         return mapToDto(page);
+    }
+
+    @Transactional
+    public void deletePage(Long pageId) {
+        if (!pageRepository.existsById(pageId)) {
+            throw new ResourceNotFoundException("Page not found with id: " + pageId);
+        }
+        pageRepository.deleteById(pageId);
     }
 
     public PageDetailDto getPageDetails(Long pageId) {
@@ -109,7 +118,8 @@ public class PageService {
                 .id(entity.getId())
                 .title(entity.getTitle())
                 .slug(entity.getSlug())
-                .ownerName(entity.getOwner().getUsername()) // или FullName
+                .type(entity.getType())
+                .ownerName(entity.getOwner().getUsername())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
