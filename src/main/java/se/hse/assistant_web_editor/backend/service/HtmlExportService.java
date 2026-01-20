@@ -51,21 +51,28 @@ public class HtmlExportService {
             case "header" -> {
                 int level = (int) props.getOrDefault("level", 2);
                 String text = (String) props.getOrDefault("text", "");
-                yield "<h" + level + ">" + text + "</h" + level + ">";
+                String align = (String) props.getOrDefault("align", "left");
+
+                yield String.format(
+                        "<h%d style=\"margin-top: 20px; margin-bottom: 10px; color: #0F2D69; text-align: %s; font-family: 'HSE Sans', Arial;\">%s</h%d>",
+                        level, align, text, level
+                );
             }
             case "text" -> {
                 String content = (String) props.getOrDefault("content", "");
-                yield "<div class=\"hse-text-block\">" + content + "</div>";
+                yield content;
             }
             case "hero" -> {
                 String title = (String) props.getOrDefault("title", "");
                 String img = (String) props.getOrDefault("imageUrl", "");
                 yield String.format(
-                        "<div class=\"hse-hero\" style=\"background-image: url('%s')\"><h1>%s</h1></div>",
+                        "<div style=\"background: linear-gradient(rgba(15,45,105,0.7), rgba(15,45,105,0.7)), url('%s'); background-size: cover; padding: 60px 40px; border-radius: 4px; color: white; text-align: center; margin-bottom: 24px;\">" +
+                                "<h1 style=\"color: white; margin: 0; font-size: 32px;\">%s</h1>" +
+                                "</div>",
                         img, title
                 );
             }
-            default -> "<!-- Неподдерживаемый блок -->";
+            default -> "<!-- Unknown Block -->";
         };
     }
 }

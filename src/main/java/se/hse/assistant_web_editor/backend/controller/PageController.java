@@ -46,6 +46,16 @@ public class PageController {
         return ResponseEntity.ok("Deleted");
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<PageDto> updatePageMeta(@PathVariable Long id, @RequestBody CreatePageRequest request) {
+        return ResponseEntity.ok(pageService.updatePageMeta(id, request));
+    }
+
+    @PostMapping("/{id}/duplicate")
+    public ResponseEntity<PageDto> duplicatePage(@PathVariable Long id, @AuthenticationPrincipal UserDetails user) {
+        return ResponseEntity.ok(pageService.duplicatePage(id, user.getUsername()));
+    }
+
     @PostMapping("/{id}/save")
     public ResponseEntity<String> savePageVersion(@PathVariable Long id,
                                               @RequestBody SaveVersionRequest request) {

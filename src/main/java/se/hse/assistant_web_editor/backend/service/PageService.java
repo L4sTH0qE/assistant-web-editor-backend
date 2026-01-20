@@ -74,6 +74,52 @@ public class PageService {
         pageRepository.deleteById(pageId);
     }
 
+    @Transactional
+    public PageDto updatePageMeta(Long id, CreatePageRequest request) {
+        PageEntity page = pageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + id));
+
+        page.setTitle(request.getTitle());
+
+        if (request.getSlug() != null && !request.getSlug().equals(page.getSlug())) {
+            if (pageRepository.findBySlug(request.getSlug()).isPresent()) {
+                throw new IllegalArgumentException("Page with slug '" + request.getSlug() + "' already exists");
+            } else {
+                page.setSlug(request.getSlug());
+            }
+        }
+
+        return mapToDto(pageRepository.save(page));
+    }
+
+    @Transactional
+    public PageDto duplicatePage(Long sourceId, String username) {
+        PageEntity source = pageRepository.findById(sourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + sourceId));
+
+        PageVersionEntity sourceVersion = versionRepository.findFirstByPageIdOrderByVersionNumberDesc(sourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Source page is empty"));
+
+        UserEntity currentUser = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        PageEntity newPage = PageEntity.builder()
+                .title("Копия " + source.getTitle())
+                .type(source.getType())
+                .slug(null)
+                .owner(currentUser)
+                .build();
+        newPage = pageRepository.save(newPage);
+
+        PageVersionEntity newVersion = PageVersionEntity.builder()
+                .page(newPage)
+                .versionNumber(1)
+                .structure(sourceVersion.getStructure())
+                .build();
+        versionRepository.save(newVersion);
+
+        return mapToDto(newPage);
+    }
+
     public PageDetailDto getPageDetails(Long pageId) {
         PageEntity page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + pageId));
