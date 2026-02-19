@@ -19,50 +19,90 @@ public class PageController {
     private final PageService pageService;
     private final HtmlExportService htmlExportService;
 
+    /// Endpoint for getting all pages.
+    ///
+    /// @param userDetails Return value of userDetailsService.
+    /// @return ResponseEntity containing List of DTO objects containing pages data.
     @GetMapping
-    public ResponseEntity<List<PageDto>> getPages(@AuthenticationPrincipal UserDetails user) {
-        return ResponseEntity.ok(pageService.getAllPages(user.getUsername()));
+    public ResponseEntity<List<PageDto>> getPages(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pageService.getAllPages());
     }
 
+    /// Endpoint for getting all pages created by user.
+    ///
+    /// @param userDetails Return value of userDetailsService.
+    /// @return ResponseEntity containing List of DTO objects containing pages data.
     @GetMapping("/my")
-    public ResponseEntity<List<PageDto>> getUserPages(@AuthenticationPrincipal UserDetails user) {
-        return ResponseEntity.ok(pageService.getAllUserPages(user.getUsername()));
+    public ResponseEntity<List<PageDto>> getUserPages(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pageService.getAllUserPages(userDetails.getUsername()));
     }
 
+    /// Endpoint for creating new page.
+    ///
+    /// @param request     New page meta information.
+    /// @param userDetails Return value of userDetailsService.
+    /// @return ResponseEntity containing DTO object containing page data.
     @PostMapping
     public ResponseEntity<PageDto> createPage(@RequestBody CreatePageRequest request,
-                                          @AuthenticationPrincipal UserDetails user) {
-        return ResponseEntity.ok(pageService.createPage(request, user.getUsername()));
+                                              @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pageService.createPage(request, userDetails.getUsername()));
     }
 
+    /// Endpoint for getting a page.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing DTO object containing full page data.
     @GetMapping("/{id}")
     public ResponseEntity<PageDetailDto> getPage(@PathVariable Long id) {
         return ResponseEntity.ok(pageService.getPageDetails(id));
     }
 
+    /// Endpoint for deleting a page.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing deleting status.
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deletePage(@PathVariable Long id) {
         pageService.deletePage(id);
         return ResponseEntity.ok("Deleted");
     }
 
+    /// Endpoint for updating page meta information.
+    ///
+    /// @param id      Page id.
+    /// @param request Page new meta information.
+    /// @return ResponseEntity containing DTO object containing page data.
     @PutMapping("/{id}")
     public ResponseEntity<PageDto> updatePageMeta(@PathVariable Long id, @RequestBody CreatePageRequest request) {
         return ResponseEntity.ok(pageService.updatePageMeta(id, request));
     }
 
+    /// Endpoint for cloning a page.
+    ///
+    /// @param id          Page id.
+    /// @param userDetails Return value of userDetailsService.
+    /// @return ResponseEntity containing DTO object containing page data.
     @PostMapping("/{id}/duplicate")
-    public ResponseEntity<PageDto> duplicatePage(@PathVariable Long id, @AuthenticationPrincipal UserDetails user) {
-        return ResponseEntity.ok(pageService.duplicatePage(id, user.getUsername()));
+    public ResponseEntity<PageDto> duplicatePage(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pageService.duplicatePage(id, userDetails.getUsername()));
     }
 
+    /// Endpoint for saving new page version.
+    ///
+    /// @param id      Page id.
+    /// @param request Page new version data.
+    /// @return ResponseEntity containing saving status.
     @PostMapping("/{id}/save")
     public ResponseEntity<String> savePageVersion(@PathVariable Long id,
-                                              @RequestBody SaveVersionRequest request) {
+                                                  @RequestBody SaveVersionRequest request) {
         pageService.savePageVersion(id, request);
         return ResponseEntity.ok("Saved");
     }
 
+    /// Endpoint for exporting page content as html code.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing List of DTO objects containing page blocks data.
     @GetMapping("/{id}/export")
     public ResponseEntity<List<ExportBlockDto>> exportFragments(@PathVariable Long id) {
         return ResponseEntity.ok(htmlExportService.exportBlocks(id));

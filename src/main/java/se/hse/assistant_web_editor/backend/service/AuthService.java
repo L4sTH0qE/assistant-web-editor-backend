@@ -13,6 +13,7 @@ import se.hse.assistant_web_editor.backend.dto.UserDto;
 import se.hse.assistant_web_editor.backend.entity.UserEntity;
 import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
+/// Service for handling users authentication and registration logic.
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -30,7 +31,7 @@ public class AuthService {
     public AuthResponse register(AuthRequest request) {
 
         if (repository.findByUsername(request.username()).isPresent()) {
-            return AuthResponse.error("Username already taken");
+            return AuthResponse.error("Логин уже занят");
         }
 
         var user = UserEntity.builder()
@@ -54,7 +55,7 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.username(), request.password())
             );
         } catch (AuthenticationException e) {
-            return AuthResponse.error("Invalid username or password");
+            return AuthResponse.error("Неправильный логин или пароль");
         }
         var userDetails = userDetailsService.loadUserByUsername(request.username());
         var jwtToken = jwtService.generateToken(userDetails);
@@ -69,7 +70,7 @@ public class AuthService {
     public UserDto getUserInfo(String username) {
 
         var user = repository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
 
         return UserDto.builder()
                 .id(user.getId())

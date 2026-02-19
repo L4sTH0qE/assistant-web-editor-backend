@@ -21,12 +21,12 @@ public class UserEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String username; // email
+    private String username; // email (@hse.ru)
 
     @Column(nullable = false)
     private String passwordHash;
 
-    private String fullName;
+    private String fullName; // same as email
 
     @CreationTimestamp
     private LocalDateTime createdAt;

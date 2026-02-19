@@ -11,12 +11,17 @@ import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
 import java.util.ArrayList;
 
+/// Custom implementation of UserDetailsService.
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+    /// Get user details by username (used for jwt tokens).
+    ///
+    /// @param username Username.
+    /// @return User details info.
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 

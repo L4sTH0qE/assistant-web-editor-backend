@@ -20,6 +20,7 @@ import se.hse.assistant_web_editor.backend.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/// Service for handling pages CRUD operations.
 @Service
 @RequiredArgsConstructor
 public class PageService {
@@ -29,12 +30,19 @@ public class PageService {
     private final UserRepository userRepository;
     private final PageVersionRepository pageVersionRepository;
 
-    public List<PageDto> getAllPages(String username) {
+    /// Get all pages.
+    ///
+    /// @return List of DTO objects containing pages data.
+    public List<PageDto> getAllPages() {
         return pageRepository.findAll().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
+    /// Get all pages created by user.
+    ///
+    /// @param username Owner username.
+    /// @return List of DTO objects containing pages data created by user.
     public List<PageDto> getAllUserPages(String username) {
         return pageRepository.findAll().stream()
                 .filter(p -> p.getOwner().getUsername().equals(username))
@@ -42,6 +50,11 @@ public class PageService {
                 .collect(Collectors.toList());
     }
 
+    /// Create new page.
+    ///
+    /// @param request Page meta information.
+    /// @param username Creator username.
+    /// @return DTO object containing page data.
     @Transactional
     public PageDto createPage(CreatePageRequest request, String username) {
         UserEntity owner = userRepository.findByUsername(username)
@@ -65,6 +78,9 @@ public class PageService {
         return mapToDto(page);
     }
 
+    /// Delete page.
+    ///
+    /// @param pageId Page id.
     @Transactional
     public void deletePage(Long pageId) {
         if (!pageRepository.existsById(pageId)) {
@@ -74,6 +90,11 @@ public class PageService {
         pageRepository.deleteById(pageId);
     }
 
+    /// Update page meta information.
+    ///
+    /// @param request Page meta information.
+    /// @param id Page id.
+    /// @return DTO object containing page data.
     @Transactional
     public PageDto updatePageMeta(Long id, CreatePageRequest request) {
         PageEntity page = pageRepository.findById(id)
@@ -92,6 +113,11 @@ public class PageService {
         return mapToDto(pageRepository.save(page));
     }
 
+    /// Clone page.
+    ///
+    /// @param username Creator username.
+    /// @param sourceId Source page id.
+    /// @return DTO object containing page data.
     @Transactional
     public PageDto duplicatePage(Long sourceId, String username) {
         PageEntity source = pageRepository.findById(sourceId)
@@ -120,6 +146,10 @@ public class PageService {
         return mapToDto(newPage);
     }
 
+    /// Retrieve full page data.
+    ///
+    /// @param pageId Page id.
+    /// @return DTO object containing full page data.
     public PageDetailDto getPageDetails(Long pageId) {
         PageEntity page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + pageId));
@@ -135,10 +165,18 @@ public class PageService {
                 .build();
     }
 
+    /// Retrieve page latest version.
+    ///
+    /// @param pageId Page id.
+    /// @return DTO object containing full page data.
     public PageDetailDto findLatestEntity(Long pageId) {
         return getPageDetails(pageId);
     }
 
+    /// Save page new version.
+    ///
+    /// @param pageId Page id.
+    /// @param request Page blocks data.
     @Transactional
     public void savePageVersion(Long pageId, SaveVersionRequest request) {
         PageEntity page = pageRepository.findById(pageId)
@@ -152,6 +190,11 @@ public class PageService {
         pageRepository.save(page);
     }
 
+    /// Create page new version.
+    ///
+    /// @param page Page entity.
+    /// @param blocks Page blocks data.
+    /// @param version Page version id.
     private void createVersion(PageEntity page, List<BlockData> blocks, int version) {
         PageVersionEntity newVersion = PageVersionEntity.builder()
                 .page(page)
@@ -161,6 +204,10 @@ public class PageService {
         versionRepository.save(newVersion);
     }
 
+    /// Convert page entity to page dto.
+    ///
+    /// @param entity Page entity.
+    /// @return DTO object containing page data.
     private PageDto mapToDto(PageEntity entity) {
         return PageDto.builder()
                 .id(entity.getId())
