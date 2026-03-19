@@ -17,6 +17,7 @@ import se.hse.assistant_web_editor.backend.repository.PageRepository;
 import se.hse.assistant_web_editor.backend.repository.PageVersionRepository;
 import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,6 @@ import java.util.stream.Collectors;
 public class PageService {
 
     private final PageRepository pageRepository;
-    private final PageVersionRepository versionRepository;
     private final UserRepository userRepository;
     private final PageVersionRepository pageVersionRepository;
 
@@ -52,7 +52,7 @@ public class PageService {
 
     /// Create new page.
     ///
-    /// @param request Page meta information.
+    /// @param request  Page meta information.
     /// @param username Creator username.
     /// @return DTO object containing page data.
     @Transactional
@@ -93,7 +93,7 @@ public class PageService {
     /// Update page meta information.
     ///
     /// @param request Page meta information.
-    /// @param id Page id.
+    /// @param id      Page id.
     /// @return DTO object containing page data.
     @Transactional
     public PageDto updatePageMeta(Long id, CreatePageRequest request) {
@@ -113,25 +113,43 @@ public class PageService {
         return mapToDto(pageRepository.save(page));
     }
 
+    /// Update page sync status
+    ///
+    /// @param id               Page id.
+    /// @param syncStatus       Page sync status.
+    /// @param lastSyncCheck    Page last sync check.
+    @Transactional
+    public void updateSyncStatus(Long id, String syncStatus, LocalDateTime lastSyncCheck) {
+        PageEntity page = pageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + id));
+        page.setSyncStatus(syncStatus);
+        page.setLastSyncCheck(lastSyncCheck);
+        pageRepository.save(page);
+    }
+
     /// Clone page.
     ///
     /// @param username Creator username.
     /// @param sourceId Source page id.
     /// @return DTO object containing page data.
     @Transactional
-    public PageDto duplicatePage(Long sourceId, String username) {
+    public PageDto duplicatePage(Long sourceId, String username, String slug) {
         PageEntity source = pageRepository.findById(sourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + sourceId));
 
-        PageVersionEntity sourceVersion = versionRepository.findFirstByPageIdOrderByVersionNumberDesc(sourceId)
+        PageVersionEntity sourceVersion = pageVersionRepository.findFirstByPageIdOrderByVersionNumberDesc(sourceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Source page is empty"));
 
         UserEntity currentUser = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        if (pageRepository.findBySlug(slug).isPresent()) {
+            throw new IllegalArgumentException("Page with slug '" + slug + "' already exists");
+        }
+
         PageEntity newPage = PageEntity.builder()
                 .title("Копия " + source.getTitle())
                 .type(source.getType())
-                .slug(null)
+                .slug(slug)
                 .owner(currentUser)
                 .build();
         newPage = pageRepository.save(newPage);
@@ -141,7 +159,7 @@ public class PageService {
                 .versionNumber(1)
                 .structure(sourceVersion.getStructure())
                 .build();
-        versionRepository.save(newVersion);
+        pageVersionRepository.save(newVersion);
 
         return mapToDto(newPage);
     }
@@ -152,20 +170,28 @@ public class PageService {
     /// @return DTO object containing full page data.
     public PageDetailDto getPageDetails(Long pageId) {
         PageEntity page = pageRepository.findById(pageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + pageId));
+                .orElseThrow(() -> new ResourceNotFoundException("Страница не найдена: " + pageId));
 
-        PageVersionEntity latestVersion = versionRepository.findFirstByPageIdOrderByVersionNumberDesc(pageId)
-                .orElseThrow(() -> new ResourceNotFoundException("No versions found for page: " + pageId));
+        PageVersionEntity latestVersion = pageVersionRepository.findFirstByPageIdOrderByVersionNumberDesc(pageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Не найдено ни одной версии для страницы: " + pageId));
+
+        List<BlockData> safeBlocks = latestVersion.getStructure() != null ? latestVersion.getStructure() : java.util.List.of();
+        java.util.Map<String, Object> safeMetadata = page.getMetadata() != null ? page.getMetadata() : java.util.Map.of();
+        String safeSyncStatus = (page.getSyncStatus() == null || page.getSyncStatus().isEmpty()) ? "DRAFT" : page.getSyncStatus();
 
         return PageDetailDto.builder()
                 .id(page.getId())
                 .title(page.getTitle())
+                .slug(page.getSlug())
+                .type(page.getType())
+                .syncStatus(safeSyncStatus)
                 .currentVersion(latestVersion.getVersionNumber())
-                .blocks(latestVersion.getStructure())
+                .blocks(safeBlocks)
+                .metadata(safeMetadata)
                 .build();
     }
 
-    /// Retrieve page latest version.
+    /// Retrieve page latest version. (Псевдоним для getPageDetails)
     ///
     /// @param pageId Page id.
     /// @return DTO object containing full page data.
@@ -175,15 +201,21 @@ public class PageService {
 
     /// Save page new version.
     ///
-    /// @param pageId Page id.
+    /// @param pageId  Page id.
     /// @param request Page blocks data.
     @Transactional
     public void savePageVersion(Long pageId, SaveVersionRequest request) {
         PageEntity page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + pageId));
 
-        Integer lastVer = versionRepository.findMaxVersionByPageId(pageId).orElse(0);
+        if (request.getTitle() != null) {
+            page.setTitle(request.getTitle());
+        }
+        if (request.getMetadata() != null) {
+            page.setMetadata(request.getMetadata());
+        }
 
+        Integer lastVer = pageVersionRepository.findMaxVersionByPageId(pageId).orElse(0);
         createVersion(page, request.getBlocks(), lastVer + 1);
 
         page.setUpdatedAt(java.time.LocalDateTime.now());
@@ -192,8 +224,8 @@ public class PageService {
 
     /// Create page new version.
     ///
-    /// @param page Page entity.
-    /// @param blocks Page blocks data.
+    /// @param page    Page entity.
+    /// @param blocks  Page blocks data.
     /// @param version Page version id.
     private void createVersion(PageEntity page, List<BlockData> blocks, int version) {
         PageVersionEntity newVersion = PageVersionEntity.builder()
@@ -201,7 +233,7 @@ public class PageService {
                 .versionNumber(version)
                 .structure(blocks)
                 .build();
-        versionRepository.save(newVersion);
+        pageVersionRepository.save(newVersion);
     }
 
     /// Convert page entity to page dto.

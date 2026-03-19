@@ -9,9 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import se.hse.assistant_web_editor.backend.dto.AuthRequest;
-import se.hse.assistant_web_editor.backend.dto.AuthResponse;
-import se.hse.assistant_web_editor.backend.dto.UserDto;
+import se.hse.assistant_web_editor.backend.dto.*;
 import se.hse.assistant_web_editor.backend.service.AuthService;
 
 @RestController
@@ -22,24 +20,26 @@ public class AuthController {
 
     private final AuthService authService;
 
+    /// Endpoint for sending code to email for user registration.
+    ///
+    /// @param request DTO object containing registration data.
+    /// @return ResponseEntity containing the registration response.
+    @PostMapping("/register/send-code")
+    public ResponseEntity<AuthResponse> sendCode(@RequestBody @Valid SendCodeRequest request) {
+        AuthResponse resp = authService.sendVerificationCode(request.username());
+        if (!resp.success()) return ResponseEntity.badRequest().body(resp);
+        return ResponseEntity.ok(resp);
+    }
+
     /// Endpoint for user registration.
     ///
     /// @param request DTO object containing registration data.
     /// @return ResponseEntity containing the registration response.
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody @Valid AuthRequest request, BindingResult result) {
-
-        if (result.hasErrors()) {
-            return ResponseEntity.badRequest().body(AuthResponse.error("Invalid username or password"));
-        }
-
-        AuthResponse authResponse = authService.register(request);
-        log.warn("Register {}", authResponse.success());
-        if (authResponse.success()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
-        } else {
-            return ResponseEntity.badRequest().body(authResponse);
-        }
+    @PostMapping("/register/confirm")
+    public ResponseEntity<AuthResponse> confirmRegister(@RequestBody ConfirmRegisterRequest request) {
+        AuthResponse resp = authService.confirmRegistration(request);
+        if (!resp.success()) return ResponseEntity.badRequest().body(resp);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
     /// Endpoint for user authentication.
@@ -54,7 +54,6 @@ public class AuthController {
         }
 
         AuthResponse authResponse = authService.authenticate(request);
-        log.warn("Login {}", authResponse.success());
         if (authResponse.success()) {
             return ResponseEntity.ok(authResponse);
         } else {

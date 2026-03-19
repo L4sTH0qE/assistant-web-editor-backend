@@ -6,10 +6,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import se.hse.assistant_web_editor.backend.dto.*;
+import se.hse.assistant_web_editor.backend.service.AutoLinkService;
 import se.hse.assistant_web_editor.backend.service.HtmlExportService;
 import se.hse.assistant_web_editor.backend.service.PageService;
+import se.hse.assistant_web_editor.backend.service.SyncService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/pages")
@@ -18,6 +21,8 @@ public class PageController {
 
     private final PageService pageService;
     private final HtmlExportService htmlExportService;
+    private final SyncService syncService;
+    private final AutoLinkService autoLinkService;
 
     /// Endpoint for getting all pages.
     ///
@@ -80,11 +85,12 @@ public class PageController {
     /// Endpoint for cloning a page.
     ///
     /// @param id          Page id.
+    /// @param request     Page slug.
     /// @param userDetails Return value of userDetailsService.
     /// @return ResponseEntity containing DTO object containing page data.
     @PostMapping("/{id}/duplicate")
-    public ResponseEntity<PageDto> duplicatePage(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(pageService.duplicatePage(id, userDetails.getUsername()));
+    public ResponseEntity<PageDto> duplicatePage(@PathVariable Long id, @RequestBody CopyPageRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(pageService.duplicatePage(id, userDetails.getUsername(), request.getSlug()));
     }
 
     /// Endpoint for saving new page version.
@@ -106,5 +112,25 @@ public class PageController {
     @GetMapping("/{id}/export")
     public ResponseEntity<List<ExportBlockDto>> exportFragments(@PathVariable Long id) {
         return ResponseEntity.ok(htmlExportService.exportBlocks(id));
+    }
+
+    /// Endpoint for checking synchronization with external url.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing Map of Blocks with synchronization statuses.
+    @PostMapping("/{id}/check-sync")
+    public ResponseEntity<Map<String, String>> checkSync(@PathVariable Long id) {
+        String status = syncService.checkSync(id);
+        return ResponseEntity.ok(Map.of("status", status));
+    }
+
+    /// Endpoint for applying auto-linking.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing DTO object containing page detailed data.
+    @PostMapping("/{id}/autolink")
+    public ResponseEntity<PageDetailDto> applyAutoLinks(@PathVariable Long id) {
+        PageDetailDto updatedPage = autoLinkService.processAndSaveAutoLinks(id);
+        return ResponseEntity.ok(updatedPage);
     }
 }

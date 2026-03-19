@@ -42,6 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/ws/**", "/error")
                         .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/files/**")
+                        .permitAll()
                         .anyRequest()
                         .authenticated()
                 )
