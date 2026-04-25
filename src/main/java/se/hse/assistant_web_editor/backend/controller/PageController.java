@@ -12,7 +12,6 @@ import se.hse.assistant_web_editor.backend.service.PageService;
 import se.hse.assistant_web_editor.backend.service.SyncService;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/pages")
@@ -117,12 +116,13 @@ public class PageController {
     /// Endpoint for checking synchronization with external url.
     ///
     /// @param id Page id.
-    /// @return ResponseEntity containing Map of Blocks with synchronization statuses.
+    /// @return ResponseEntity containing DTO object with synchronization statuses.
     @PostMapping("/{id}/check-sync")
-    public ResponseEntity<Map<String, String>> checkSync(@PathVariable Long id) {
-        String status = syncService.checkSync(id);
-        return ResponseEntity.ok(Map.of("status", status));
+    public ResponseEntity<SyncReportDto> checkSync(@PathVariable Long id) {
+        SyncReportDto report = syncService.checkSync(id);
+        return ResponseEntity.ok(report);
     }
+
 
     /// Endpoint for applying auto-linking.
     ///

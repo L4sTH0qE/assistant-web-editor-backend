@@ -241,12 +241,17 @@ public class PageService {
     /// @param entity Page entity.
     /// @return DTO object containing page data.
     private PageDto mapToDto(PageEntity entity) {
+        String safeSyncStatus = (entity.getSyncStatus() == null || entity.getSyncStatus().isBlank())
+                ? "DRAFT"
+                : entity.getSyncStatus();
+
         return PageDto.builder()
                 .id(entity.getId())
                 .title(entity.getTitle())
                 .slug(entity.getSlug())
                 .type(entity.getType())
                 .ownerName(entity.getOwner().getUsername())
+                .syncStatus(safeSyncStatus)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

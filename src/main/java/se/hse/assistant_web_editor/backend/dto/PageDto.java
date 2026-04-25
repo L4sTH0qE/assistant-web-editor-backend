@@ -13,6 +13,7 @@ public class PageDto {
     private String slug;
     private PageType type;
     private String ownerName;
+    private String syncStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
