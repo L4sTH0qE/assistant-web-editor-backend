@@ -55,7 +55,7 @@ public class SyncService {
 
             String annotation = (String) page.getMetadata().get("annotation");
             if (annotation != null && !annotation.isBlank()) {
-                internalBuilder.append(annotation).append(". ");
+                internalBuilder.append(annotation);
             }
 
             if (page.getBlocks() != null) {

@@ -19,6 +19,7 @@ import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /// Service for handling pages CRUD operations.
@@ -215,10 +216,22 @@ public class PageService {
             page.setMetadata(request.getMetadata());
         }
 
+        if (Objects.equals(page.getSyncStatus(), "SYNCED")) {
+            page.setSyncStatus("DESYNCED");
+        }
+
+        if (request.getSlug() != null && !request.getSlug().isBlank() && !request.getSlug().equals(page.getSlug())) {
+            if (pageRepository.findBySlug(request.getSlug()).isPresent()) {
+                throw new IllegalArgumentException("Путь '" + request.getSlug() + "' уже занят другой страницей");
+            }
+            page.setSlug(request.getSlug());
+        }
+
+        page.setUpdatedAt(java.time.LocalDateTime.now());
+
         Integer lastVer = pageVersionRepository.findMaxVersionByPageId(pageId).orElse(0);
         createVersion(page, request.getBlocks(), lastVer + 1);
 
-        page.setUpdatedAt(java.time.LocalDateTime.now());
         pageRepository.save(page);
     }
 

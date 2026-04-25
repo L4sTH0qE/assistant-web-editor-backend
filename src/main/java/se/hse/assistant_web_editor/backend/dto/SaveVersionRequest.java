@@ -11,4 +11,5 @@ public class SaveVersionRequest {
     private String title;
     private Map<String, Object> metadata;
     private List<BlockData> blocks;
+    private String slug;
 }
