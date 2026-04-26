@@ -12,6 +12,6 @@ public enum TaxonomyType {
                 return b;
             }
         }
-        throw new IllegalArgumentException("Неизвестный тип справочника: " + text);
+        throw new IllegalArgumentException("Неизвестный тип элемента справочника: " + text);
     }
 }

@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
+/// Service for auto-linking algorithm.
 @Service
 @RequiredArgsConstructor
 public class AutoLinkService {
@@ -34,7 +35,6 @@ public class AutoLinkService {
             return page;
         }
 
-        // Сортируем от самых длинных фраз к самым коротким (чтобы длинные заменялись первыми и не было коллизий)
         terms.sort(Comparator.comparingInt((GlossaryTermEntity t) -> t.getTerm().length()).reversed());
 
         boolean isModified = false;
@@ -46,7 +46,6 @@ public class AutoLinkService {
 
                     String updatedContent = replaceTermsInHtml(content, terms);
 
-                    // Если HTML изменился
                     if (!content.equals(updatedContent)) {
                         block.getProps().put("content", updatedContent);
                         isModified = true;
@@ -55,7 +54,6 @@ public class AutoLinkService {
             }
         }
 
-        // Сохраняем новую версию только если были реальные изменения
         if (isModified) {
             SaveVersionRequest request = new SaveVersionRequest();
             request.setBlocks(page.getBlocks());
@@ -68,24 +66,17 @@ public class AutoLinkService {
         return pageService.findLatestEntity(pageId);
     }
 
-    /**
-     * Безопасная манипуляция DOM-деревом.
-     */
     private String replaceTermsInHtml(String html, List<GlossaryTermEntity> terms) {
         Document doc = Jsoup.parseBodyFragment(html);
         boolean documentChanged = false;
 
-        // Применяем термины ПО ОЧЕРЕДИ
         for (GlossaryTermEntity term : terms) {
 
-            // 1. Сначала собираем все текстовые ноды в отдельный список,
-            // чтобы не модифицировать DOM-дерево прямо во время обхода Jsoup (Избегаем IndexOutOfBoundsException)
             List<TextNode> targetNodes = new ArrayList<>();
 
             doc.body().traverse(new NodeVisitor() {
                 @Override
                 public void head(org.jsoup.nodes.Node node, int depth) {
-                    // Игнорируем текст, который уже обернут в ссылку <a> (защита от ссылок в ссылке)
                     if (node.parent() != null && node.parent().nodeName().equalsIgnoreCase("a")) {
                         return;
                     }
@@ -98,21 +89,18 @@ public class AutoLinkService {
                 public void tail(org.jsoup.nodes.Node node, int depth) {}
             });
 
-            // 2. Теперь безопасно модифицируем собранные ноды
             for (TextNode textNode : targetNodes) {
                 String text = textNode.getWholeText();
 
-                // Флаги: CASE_INSENSITIVE (?i) + UNICODE_CHARACTER_CLASS (?U) критически важны для работы с кириллицей!
                 String regex = "(?iU)\\b" + Pattern.quote(term.getTerm()) + "\\b";
                 String replacement = String.format("<a href=\"%s\" style=\"color: var(--hse-blue-accent);\">%s</a>",
-                        term.getUrl(), "$0"); // $0 сохраняет оригинальный регистр найденного слова (ФКН, фкн)
+                        term.getUrl(), "$0");
 
                 String newText = text.replaceAll(regex, replacement);
 
-                // Если слово найдено и текст изменился
                 if (!newText.equals(text)) {
-                    textNode.before(newText); // Парсим и добавляем новый HTML ДО старого текстового узла
-                    textNode.remove();        // Полностью удаляем старый текстовый узел
+                    textNode.before(newText);
+                    textNode.remove();
                     documentChanged = true;
                 }
             }

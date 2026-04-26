@@ -32,7 +32,7 @@ public class FileController {
 
             return ResponseEntity.ok(Map.of("url", fileDownloadUri));
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Could not upload file"));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Не удалось загрузить файл"));
         }
     }
 

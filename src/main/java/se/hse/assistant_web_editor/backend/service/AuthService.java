@@ -1,7 +1,6 @@
 package se.hse.assistant_web_editor.backend.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,10 +17,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-/// Service for handling users authentication and registration logic.
+/// Service for handling users authentication and registration.
 @Service
 @RequiredArgsConstructor
-@Log4j2
 public class AuthService {
 
     private final UserRepository repository;
@@ -35,10 +33,9 @@ public class AuthService {
 
     private final Map<String, VerificationSession> verificationCodes = new ConcurrentHashMap<>();
 
-    /// Отправка кода и запуск таймера
     public AuthResponse sendVerificationCode(String email) {
         if (repository.findByUsername(email).isPresent()) {
-            return AuthResponse.error("Пользователь с таким email уже существует");
+            return AuthResponse.error("Пользователь с такой почтой уже существует");
         }
 
         String code = String.format("%06d", new Random().nextInt(999999));
@@ -51,7 +48,6 @@ public class AuthService {
         return AuthResponse.success("Код подтверждения отправлен на вашу почту");
     }
 
-    /// Проверка кода и создание аккаунта
     public AuthResponse confirmRegistration(ConfirmRegisterRequest request) {
         VerificationSession session = verificationCodes.get(request.username());
 
@@ -80,10 +76,8 @@ public class AuthService {
         return authenticate(new AuthRequest(request.username(), request.password()));
     }
 
-    /// Очистка памяти: Каждые 30 минут удаляем просроченные сессии из ConcurrentHashMap
     @Scheduled(fixedRate = 1800000)
     public void cleanupExpiredCodes() {
-        log.info("Running cleanup task for expired registration codes...");
         LocalDateTime now = LocalDateTime.now();
         verificationCodes.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt()));
     }
@@ -92,7 +86,7 @@ public class AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.username(), request.password()));
         } catch (AuthenticationException e) {
-            return AuthResponse.error("Неправильный почта или пароль");
+            return AuthResponse.error("Неправильная почта или пароль");
         }
         var userDetails = userDetailsService.loadUserByUsername(request.username());
         var jwtToken = jwtService.generateToken(userDetails);
@@ -128,7 +122,7 @@ public class AuthService {
         VerificationSession session = verificationCodes.get(sessionKey);
 
         if (session == null || LocalDateTime.now().isAfter(session.expiresAt())) {
-            return AuthResponse.error("Код не найден или истек. Запросите новый.");
+            return AuthResponse.error("Код не найден или истек. Запросите новый код.");
         }
 
         if (!session.code().equals(request.code())) {

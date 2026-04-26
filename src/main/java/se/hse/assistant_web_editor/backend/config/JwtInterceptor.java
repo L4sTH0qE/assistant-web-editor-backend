@@ -42,7 +42,6 @@ public class JwtInterceptor implements ChannelInterceptor {
                     }
                 }
             }
-            log.warn("Unauthorized WebSocket connection attempt");
         }
         return message;
     }

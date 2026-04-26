@@ -58,10 +58,10 @@ public class PageService {
     @Transactional
     public PageDto createPage(CreatePageRequest request, String username) {
         UserEntity owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
 
         if (request.getSlug() != null && pageRepository.findBySlug(request.getSlug()).isPresent()) {
-            throw new IllegalArgumentException("Page with slug '" + request.getSlug() + "' already exists");
+            throw new IllegalArgumentException("Путь '" + request.getSlug() + "' уже занят другой страницей");
         }
 
         PageEntity page = PageEntity.builder()
@@ -84,7 +84,7 @@ public class PageService {
     @Transactional
     public void deletePage(Long pageId) {
         if (!pageRepository.existsById(pageId)) {
-            throw new ResourceNotFoundException("Page not found with id: " + pageId);
+            throw new ResourceNotFoundException("Страница не найдена: " + pageId);
         }
         pageVersionRepository.deleteAllByPageId(pageId);
         pageRepository.deleteById(pageId);
@@ -98,13 +98,13 @@ public class PageService {
     @Transactional
     public PageDto updatePageMeta(Long id, CreatePageRequest request) {
         PageEntity page = pageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Страница не найдена: " + id));
 
         page.setTitle(request.getTitle());
 
         if (request.getSlug() != null && !request.getSlug().equals(page.getSlug())) {
             if (pageRepository.findBySlug(request.getSlug()).isPresent()) {
-                throw new IllegalArgumentException("Page with slug '" + request.getSlug() + "' already exists");
+                throw new IllegalArgumentException("Путь '" + request.getSlug() + "' уже занят другой страницей");
             } else {
                 page.setSlug(request.getSlug());
             }
@@ -121,7 +121,7 @@ public class PageService {
     @Transactional
     public void updateSyncStatus(Long id, String syncStatus, LocalDateTime lastSyncCheck) {
         PageEntity page = pageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Страница не найдена: " + id));
         page.setSyncStatus(syncStatus);
         page.setLastSyncCheck(lastSyncCheck);
         pageRepository.save(page);
@@ -135,15 +135,15 @@ public class PageService {
     @Transactional
     public PageDto duplicatePage(Long sourceId, String username, String slug) {
         PageEntity source = pageRepository.findById(sourceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + sourceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Страница не найдена: " + sourceId));
 
         PageVersionEntity sourceVersion = pageVersionRepository.findFirstByPageIdOrderByVersionNumberDesc(sourceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Source page is empty"));
+                .orElseThrow(() -> new ResourceNotFoundException("Найденная страница пустая"));
 
-        UserEntity currentUser = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        UserEntity currentUser = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
 
         if (pageRepository.findBySlug(slug).isPresent()) {
-            throw new IllegalArgumentException("Page with slug '" + slug + "' already exists");
+            throw new IllegalArgumentException("Путь '" + slug + "' уже занят другой страницей");
         }
 
         PageEntity newPage = PageEntity.builder()
@@ -206,7 +206,7 @@ public class PageService {
     @Transactional
     public void savePageVersion(Long pageId, SaveVersionRequest request) {
         PageEntity page = pageRepository.findById(pageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Page not found with id: " + pageId));
+                .orElseThrow(() -> new ResourceNotFoundException("Страница не найдена: " + pageId));
 
         if (request.getTitle() != null) {
             page.setTitle(request.getTitle());
@@ -308,7 +308,7 @@ public class PageService {
     /// @return Page version blocks data.
     public List<BlockData> getVersionBlocks(Long versionId) {
         return pageVersionRepository.findById(versionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Version not found"))
+                .orElseThrow(() -> new ResourceNotFoundException("Версия не найдена"))
                 .getStructure();
     }
 }

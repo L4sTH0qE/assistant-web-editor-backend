@@ -102,7 +102,7 @@ public class PageController {
     public ResponseEntity<String> savePageVersion(@PathVariable Long id,
                                                   @RequestBody SaveVersionRequest request) {
         pageService.savePageVersion(id, request);
-        return ResponseEntity.ok("Saved");
+        return ResponseEntity.ok("Сохранено");
     }
 
     /// Endpoint for exporting page content as html code.

@@ -9,6 +9,7 @@ import se.hse.assistant_web_editor.backend.repository.FileRepository;
 
 import java.io.IOException;
 
+/// Service for files handling.
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -26,6 +27,6 @@ public class FileService {
 
     public FileEntity getFile(String id) {
         return fileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("File not found " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Файл не найден: " + id));
     }
 }

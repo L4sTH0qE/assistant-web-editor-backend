@@ -47,7 +47,7 @@ public class PageEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private Map<String, Object> metadata; // rubric (String), tags (List<String>), keywords (List<String>), externalUrl (String)
+    private Map<String, Object> metadata; // rubrics (List<String>), tags (List<String>), keywords (List<String>), externalUrl (String)
 
     @Column(name = "sync_status")
     private String syncStatus; // "SYNCED", "DESYNCED", "DRAFT"

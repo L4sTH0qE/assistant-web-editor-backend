@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/// Service for synchronization algorithm.
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -96,15 +97,11 @@ public class SyncService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to check sync for URL: {}", externalUrl, e);
             pageService.updateSyncStatus(pageId, "DESYNCED", LocalDateTime.now());
             return SyncReportDto.builder().status("DESYNCED").build();
         }
     }
 
-    /**
-     * Сравнивает предложения. Возвращает те, что есть в source, но отсутствуют в target.
-     */
     private List<String> findDiffSentences(String source, String target) {
         String normalizedTarget = normalizeStrict(target);
         String[] sentences = source.split("(?<=[.!?])\\s+");

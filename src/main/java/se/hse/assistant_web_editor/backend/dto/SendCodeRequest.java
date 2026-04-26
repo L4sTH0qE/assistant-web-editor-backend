@@ -4,6 +4,6 @@ import jakarta.validation.constraints.Pattern;
 
 public record SendCodeRequest(
         @NotBlank
-        @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@(hse\\.ru|edu\\.hse\\.ru)$", message = "Разрешены только домены @hse.ru и @edu.hse.ru")
+        @Pattern(regexp = "^[a-zA-Z0-9._%+-]+@(hse\\.ru)$", message = "Разрешен только домен @hse.ru")
         String username
 ) {}

@@ -11,7 +11,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BlockData implements Serializable {
-    private String id;                  // Unique block id
-    private String type;                // Block type ("text")
-    private Map<String, Object> props;  // Block content
+    private String id;
+    private String type;
+    private Map<String, Object> props;
 }

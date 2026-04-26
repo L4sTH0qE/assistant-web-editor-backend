@@ -8,6 +8,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+/// Service for sending verification codes to email.
 @Service
 @RequiredArgsConstructor
 @Log4j2
@@ -33,9 +34,8 @@ public class MailService {
                     "С уважением,\nСлужба технической поддержки");
 
             mailSender.send(message);
-            log.info("Email with registration code successfully sent to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send email to {}", toEmail, e);
+            log.error("Failed to send verification code", e);
         }
     }
 }

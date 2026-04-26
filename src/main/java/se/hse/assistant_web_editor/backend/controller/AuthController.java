@@ -50,7 +50,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> authenticate(@RequestBody @Valid AuthRequest request, BindingResult result) {
 
         if (result.hasErrors()) {
-            return ResponseEntity.badRequest().body(AuthResponse.error("Invalid username or password"));
+            return ResponseEntity.badRequest().body(AuthResponse.error("Неверная почта или пароль"));
         }
 
         AuthResponse authResponse = authService.authenticate(request);

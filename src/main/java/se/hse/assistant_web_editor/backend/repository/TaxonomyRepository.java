@@ -8,6 +8,5 @@ import se.hse.assistant_web_editor.backend.entity.TaxonomyType;
 @Repository
 public interface TaxonomyRepository extends JpaRepository<TaxonomyEntity, Long> {
 
-    // Поиск дубликатов без учета регистра
     boolean existsByTypeAndNameIgnoreCase(TaxonomyType type, String name);
 }

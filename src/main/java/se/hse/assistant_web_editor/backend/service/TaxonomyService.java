@@ -14,13 +14,13 @@ import se.hse.assistant_web_editor.backend.repository.TaxonomyRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/// Service for taxonomy handling.
 @Service
 @RequiredArgsConstructor
 public class TaxonomyService {
 
     private final TaxonomyRepository taxonomyRepository;
 
-    /// Возвращает все справочники, разбитые по категориям для фронтенда
     public TaxonomyResponseDto getAllTaxonomiesGrouped() {
         List<TaxonomyEntity> all = taxonomyRepository.findAll();
 
@@ -31,14 +31,12 @@ public class TaxonomyService {
                 .build();
     }
 
-    /// Добавляет новый элемент в справочник с проверкой на дубликаты
     @Transactional
     public TaxonomyItemDto addTaxonomy(TaxonomyCreateRequest request) {
         TaxonomyType type = TaxonomyType.fromString(request.getType());
         String name = request.getName().trim();
 
         if (taxonomyRepository.existsByTypeAndNameIgnoreCase(type, name)) {
-            // Эта ошибка поймается в GlobalExceptionHandler и вернет 400 Bad Request
             throw new IllegalArgumentException("Элемент '" + name + "' уже существует в данной категории");
         }
 
@@ -51,7 +49,6 @@ public class TaxonomyService {
         return new TaxonomyItemDto(entity.getId(), entity.getName());
     }
 
-    /// Удаляет элемент
     @Transactional
     public void deleteTaxonomy(Long id) {
         if (!taxonomyRepository.existsById(id)) {
@@ -60,7 +57,6 @@ public class TaxonomyService {
         taxonomyRepository.deleteById(id);
     }
 
-    // Вспомогательный метод для маппинга
     private List<TaxonomyItemDto> filterAndMap(List<TaxonomyEntity> list, TaxonomyType targetType) {
         return list.stream()
                 .filter(entity -> entity.getType() == targetType)
