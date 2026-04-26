@@ -50,7 +50,11 @@ public class PageEntity {
     private Map<String, Object> metadata; // rubric (String), tags (List<String>), keywords (List<String>), externalUrl (String)
 
     @Column(name = "sync_status")
-    private String syncStatus; // "SYNCED", "DESYNC", "UNKNOWN"
+    private String syncStatus; // "SYNCED", "DESYNCED", "DRAFT"
 
+    @Column(name = "last_sync_check")
     private LocalDateTime lastSyncCheck;
+
+    @Column(name = "last_synced_version")
+    private Integer lastSyncedVersion;
 }

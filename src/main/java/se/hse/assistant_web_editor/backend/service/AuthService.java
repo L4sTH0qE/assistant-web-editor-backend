@@ -9,10 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import se.hse.assistant_web_editor.backend.dto.AuthRequest;
-import se.hse.assistant_web_editor.backend.dto.AuthResponse;
-import se.hse.assistant_web_editor.backend.dto.ConfirmRegisterRequest;
-import se.hse.assistant_web_editor.backend.dto.UserDto;
+import se.hse.assistant_web_editor.backend.dto.*;
 import se.hse.assistant_web_editor.backend.entity.UserEntity;
 import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
@@ -111,5 +108,39 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role("Editor")
                 .build();
+    }
+
+    public AuthResponse sendPasswordResetCode(String email) {
+        if (repository.findByUsername(email).isEmpty()) {
+            return AuthResponse.error("Пользователь с такой почтой не найден");
+        }
+
+        String code = String.format("%06d", new Random().nextInt(999999));
+        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(10);
+        verificationCodes.put("RESET_" + email, new VerificationSession(code, expiryTime));
+
+        mailService.sendVerificationEmail(email, code);
+        return AuthResponse.success("Код для сброса пароля отправлен на почту");
+    }
+
+    public AuthResponse confirmPasswordReset(PasswordResetConfirmRequest request) {
+        String sessionKey = "RESET_" + request.email();
+        VerificationSession session = verificationCodes.get(sessionKey);
+
+        if (session == null || LocalDateTime.now().isAfter(session.expiresAt())) {
+            return AuthResponse.error("Код не найден или истек. Запросите новый.");
+        }
+
+        if (!session.code().equals(request.code())) {
+            return AuthResponse.error("Неверный код подтверждения");
+        }
+
+        UserEntity user = repository.findByUsername(request.email()).orElseThrow();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        repository.save(user);
+
+        verificationCodes.remove(sessionKey);
+
+        return authenticate(new AuthRequest(request.email(), request.newPassword()));
     }
 }

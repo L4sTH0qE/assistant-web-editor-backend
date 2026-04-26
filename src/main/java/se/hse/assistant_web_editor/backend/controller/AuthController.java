@@ -72,4 +72,29 @@ public class AuthController {
 
         return ResponseEntity.ok(userDto);
     }
+
+    /// Endpoint for sending code to email for user authorization.
+    ///
+    /// @param request DTO object containing password reset request.
+    /// @return ResponseEntity containing the login response.
+    @PostMapping("/password-reset/send-code")
+    public ResponseEntity<AuthResponse> requestPasswordReset(@RequestBody @Valid PasswordResetRequest request) {
+        AuthResponse resp = authService.sendPasswordResetCode(request.email());
+        if (!resp.success()) return ResponseEntity.badRequest().body(resp);
+        return ResponseEntity.ok(resp);
+    }
+
+    /// Endpoint for user authorization after changing password.
+    ///
+    /// @param request DTO object containing new password.
+    /// @return ResponseEntity containing the login response.
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<AuthResponse> confirmPasswordReset(@RequestBody @Valid PasswordResetConfirmRequest request, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(AuthResponse.error("Пароль не соответствует требованиям безопасности (8-64 символа, заглавная, строчная, цифра, спецсимвол)"));
+        }
+        AuthResponse resp = authService.confirmPasswordReset(request);
+        if (!resp.success()) return ResponseEntity.badRequest().body(resp);
+        return ResponseEntity.ok(resp);
+    }
 }

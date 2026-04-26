@@ -24,13 +24,13 @@ public class MailService {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(toEmail);
-            message.setSubject("Код подтверждения: Помощник редакторов сайтов ВШЭ");
+            message.setSubject("Код подтверждения: Помощник редакторов сайтов подразделений НИУ ВШЭ");
 
             message.setText("Здравствуйте!\n\n" +
-                    "Ваш код для регистрации в системе «Помощник редакторов ВШЭ»: " + code + "\n\n" +
+                    "Ваш код для регистрации в системе «Помощник редакторов сайтов подразделений НИУ ВШЭ»: " + code + "\n\n" +
                     "Код действителен в течение 10 минут.\n" +
                     "Если вы не запрашивали этот код, просто проигнорируйте письмо.\n\n" +
-                    "С уважением,\nСлужба технической поддержки.");
+                    "С уважением,\nСлужба технической поддержки");
 
             mailSender.send(message);
             log.info("Email with registration code successfully sent to {}", toEmail);

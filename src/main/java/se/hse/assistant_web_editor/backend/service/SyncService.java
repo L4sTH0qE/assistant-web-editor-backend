@@ -55,7 +55,7 @@ public class SyncService {
 
             String annotation = (String) page.getMetadata().get("annotation");
             if (annotation != null && !annotation.isBlank()) {
-                internalBuilder.append(annotation);
+                internalBuilder.append(annotation).append(" ");
             }
 
             if (page.getBlocks() != null) {
@@ -82,6 +82,10 @@ public class SyncService {
             String status = (titleMatches && similarityPercent >= 90) ? "SYNCED" : "DESYNCED";
 
             pageService.updateSyncStatus(pageId, status, LocalDateTime.now());
+
+            if ("SYNCED".equals(status)) {
+                pageService.markCurrentVersionAsSynced(pageId);
+            }
 
             return SyncReportDto.builder()
                     .status(status)

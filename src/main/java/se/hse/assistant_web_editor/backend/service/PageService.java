@@ -1,13 +1,11 @@
 package se.hse.assistant_web_editor.backend.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.hse.assistant_web_editor.backend.dto.CreatePageRequest;
-import se.hse.assistant_web_editor.backend.dto.PageDetailDto;
-import se.hse.assistant_web_editor.backend.dto.PageDto;
-import se.hse.assistant_web_editor.backend.dto.SaveVersionRequest;
+import se.hse.assistant_web_editor.backend.dto.*;
 import se.hse.assistant_web_editor.backend.entity.PageEntity;
 import se.hse.assistant_web_editor.backend.entity.PageVersionEntity;
 import se.hse.assistant_web_editor.backend.entity.UserEntity;
@@ -25,6 +23,7 @@ import java.util.stream.Collectors;
 /// Service for handling pages CRUD operations.
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PageService {
 
     private final PageRepository pageRepository;
@@ -268,5 +267,48 @@ public class PageService {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+    }
+
+    /// Mark page last version as published.
+    ///
+    /// @param pageId    Page id.
+    @Transactional
+    public void markCurrentVersionAsSynced(Long pageId) {
+        PageEntity page = pageRepository.findById(pageId).orElseThrow();
+        Integer lastVer = pageVersionRepository.findMaxVersionByPageId(pageId).orElse(0);
+        page.setLastSyncedVersion(lastVer);
+        pageRepository.save(page);
+    }
+
+    /// Get all page versions.
+    ///
+    /// @param pageId    Page id.
+    /// @return List of dto objects containg all page versions data.
+    public List<PageVersionDto> getPageHistory(Long pageId) {
+        PageEntity page = pageRepository.findById(pageId).orElseThrow();
+        List<PageVersionEntity> versions = pageVersionRepository.findAll()
+                .stream()
+                .filter(v -> v.getPage().getId().equals(pageId))
+                .sorted((v1, v2) -> v2.getVersionNumber().compareTo(v1.getVersionNumber()))
+                .toList();
+
+        Integer syncedVer = page.getLastSyncedVersion();
+
+        return versions.stream().map(v -> PageVersionDto.builder()
+                .id(v.getId())
+                .versionNumber(v.getVersionNumber())
+                .createdAt(v.getCreatedAt())
+                .isPublished(syncedVer != null && syncedVer.equals(v.getVersionNumber()))
+                .build()).collect(Collectors.toList());
+    }
+
+    /// Get all blocks of page version.
+    ///
+    /// @param versionId Page version id.
+    /// @return Page version blocks data.
+    public List<BlockData> getVersionBlocks(Long versionId) {
+        return pageVersionRepository.findById(versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Version not found"))
+                .getStructure();
     }
 }

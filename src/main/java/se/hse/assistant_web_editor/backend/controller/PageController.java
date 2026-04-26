@@ -6,6 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import se.hse.assistant_web_editor.backend.dto.*;
+import se.hse.assistant_web_editor.backend.model.BlockData;
 import se.hse.assistant_web_editor.backend.service.AutoLinkService;
 import se.hse.assistant_web_editor.backend.service.HtmlExportService;
 import se.hse.assistant_web_editor.backend.service.PageService;
@@ -132,5 +133,23 @@ public class PageController {
     public ResponseEntity<PageDetailDto> applyAutoLinks(@PathVariable Long id) {
         PageDetailDto updatedPage = autoLinkService.processAndSaveAutoLinks(id);
         return ResponseEntity.ok(updatedPage);
+    }
+
+    /// Endpoint for getting page version history.
+    ///
+    /// @param id Page id.
+    /// @return ResponseEntity containing List of DTO objects containing page version data.
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<PageVersionDto>> getPageHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(pageService.getPageHistory(id));
+    }
+
+    /// Endpoint for getting page version block data.
+    ///
+    /// @param versionId Page version id.
+    /// @return ResponseEntity containing List of page version block data.
+    @GetMapping("/versions/{versionId}")
+    public ResponseEntity<List<BlockData>> getVersionBlocks(@PathVariable Long versionId) {
+        return ResponseEntity.ok(pageService.getVersionBlocks(versionId));
     }
 }
