@@ -27,6 +27,7 @@ dependencies {
     implementation("com.google.code.gson:gson")
     implementation("io.jsonwebtoken:jjwt:0.12.6")
     implementation("org.jsoup:jsoup:1.17.2")
+    implementation("software.amazon.awssdk:s3:2.42.36")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-security")
