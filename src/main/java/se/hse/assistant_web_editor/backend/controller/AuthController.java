@@ -36,7 +36,12 @@ public class AuthController {
     /// @param request DTO object containing registration data.
     /// @return ResponseEntity containing the registration response.
     @PostMapping("/register/confirm")
-    public ResponseEntity<AuthResponse> confirmRegister(@RequestBody ConfirmRegisterRequest request) {
+    public ResponseEntity<AuthResponse> confirmRegister(@RequestBody @Valid ConfirmRegisterRequest request, BindingResult result) {
+
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(AuthResponse.error("Неверная почта или пароль"));
+        }
+
         AuthResponse resp = authService.confirmRegistration(request);
         if (!resp.success()) return ResponseEntity.badRequest().body(resp);
         return ResponseEntity.status(HttpStatus.CREATED).body(resp);
