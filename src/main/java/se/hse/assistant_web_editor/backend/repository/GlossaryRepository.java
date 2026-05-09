@@ -6,4 +6,5 @@ import se.hse.assistant_web_editor.backend.entity.GlossaryTermEntity;
 
 @Repository
 public interface GlossaryRepository extends JpaRepository<GlossaryTermEntity, Long> {
+    boolean existsByTerm(String term);
 }
