@@ -2,6 +2,9 @@ package se.hse.assistant_web_editor.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +20,10 @@ import se.hse.assistant_web_editor.backend.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /// Service for handling pages CRUD operations.
@@ -310,5 +316,39 @@ public class PageService {
         return pageVersionRepository.findById(versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Версия не найдена"))
                 .getStructure();
+    }
+
+    /// Parse person page.
+    ///
+    /// @param url Url to person page.
+    /// @return Person's name and photo url.
+    public Map<String, String> parsePerson(String url) {
+        try {
+            Document doc = Jsoup.connect(url).get();
+
+            String name = doc.selectFirst("h1.person-caption") != null
+                    ? Objects.requireNonNull(doc.selectFirst("h1.person-caption")).text()
+                    : doc.select("meta[property=og:title]").attr("content");
+
+            String photoUrl = "/images/fb/hse_ru_thumb.jpg";
+            Element avatarDiv = doc.selectFirst(".person-avatar");
+            if (avatarDiv != null) {
+                String style = avatarDiv.attr("style");
+                Matcher m = Pattern.compile("url\\((.*?)\\)").matcher(style);
+                if (m.find()) {
+                    photoUrl = m.group(1).replace("'", "").replace("\"", "");
+                }
+            } else if (doc.selectFirst("img.g-pic") != null) {
+                photoUrl = Objects.requireNonNull(doc.selectFirst("img.g-pic")).attr("src");
+            }
+
+            if (photoUrl.startsWith("/")) {
+                photoUrl = "https://www.hse.ru" + photoUrl;
+            }
+
+            return Map.of("name", name, "photoUrl", photoUrl);
+        } catch (Exception e) {
+            return Map.of("error", "Не удалось распарсить страницу персоны");
+        }
     }
 }
