@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Service;
 import se.hse.assistant_web_editor.backend.dto.PageDetailDto;
 import se.hse.assistant_web_editor.backend.dto.SyncReportDto;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/// Service for handling synchronization.
+/// Service for synchronization.
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,7 +45,7 @@ public class SyncService {
             doc.select(".fotorama--hidden, .fotorama__nav-wrap, .fotorama__caption, .fotorama__copyright, .fotorama-bottom_caption").remove();
 
             String externalTitle = doc.select("h1").text();
-            org.jsoup.nodes.Element extBodyEl = doc.selectFirst(".post__text");
+            Element extBodyEl = doc.selectFirst(".post__text");
             if (extBodyEl == null) extBodyEl = doc.selectFirst(".post__content, .builder-section, .tab-content");
 
             List<String> externalBlocks = extractBlocksSafely(extBodyEl);
@@ -53,7 +54,7 @@ public class SyncService {
             List<String> internalBlocks = new ArrayList<>();
 
             String annotation = (String) page.getMetadata().get("annotation");
-            if (annotation != null && !annotation.isBlank()) internalBlocks.add(annotation);
+            if (annotation != null && !annotation.isBlank()) internalBlocks.add(annotation.trim());
 
             if (page.getBlocks() != null) {
                 for (BlockData block : page.getBlocks()) {
@@ -63,7 +64,7 @@ public class SyncService {
                             internalBlocks.addAll(extractBlocksSafely(Jsoup.parseBodyFragment(html).body()));
                         }
                     } else if ("person".equals(block.getType())) {
-                        internalBlocks.add((String) block.getProps().get("name"));
+                        internalBlocks.add(((String) block.getProps().get("name")).trim());
                     }
                 }
             }
@@ -85,7 +86,7 @@ public class SyncService {
             return SyncReportDto.builder()
                     .status(status)
                     .titleMatch(titleMatches)
-                    .similarityPercent(Math.max(0, similarityPercent))
+                    .similarityPercent(Math.max(0, Math.min(100, similarityPercent)))
                     .missingOnWebsite(missingOnWebsite)
                     .extraOnWebsite(extraOnWebsite)
                     .build();
@@ -96,30 +97,32 @@ public class SyncService {
         }
     }
 
-    private List<String> extractBlocksSafely(org.jsoup.nodes.Element element) {
+    private List<String> extractBlocksSafely(Element element) {
         List<String> result = new ArrayList<>();
         if (element == null) return result;
 
-        for (org.jsoup.nodes.Element img : element.select("img")) {
+        for (Element img : element.select("img")) {
             String alt = img.attr("alt").trim();
             if (!alt.isEmpty()) result.add(alt);
             img.remove();
         }
-
-        for (org.jsoup.nodes.Element el : element.select("br, p, div, li, h1, h2, h3, h4, h5, h6, td")) {
-            el.append(" ||| ");
-        }
-
-        String rawText = element.text();
-        String[] chunks = rawText.split("\\|\\|\\|");
-
-        for (String chunk : chunks) {
-            String cleaned = chunk.trim();
-            if (cleaned.length() > 10 && !cleaned.contains("Подписаться на рассылку") && !cleaned.equals("НИУ ВШЭ")) {
-                result.add(cleaned);
+        for (Element el : element.select("p, h1, h2, h3, h4, h5, h6, li")) {
+            String text = el.text().trim();
+            if (text.length() > 5 && !text.contains("Подписаться на рассылку") && !text.equals("НИУ ВШЭ")) {
+                result.add(text);
             }
+            el.remove();
         }
-        return result.stream().distinct().collect(Collectors.toList());
+
+        String leftoverText = element.text().trim();
+        if (leftoverText.length() > 5 && !leftoverText.contains("Подписаться на рассылку")) {
+            result.add(leftoverText);
+        }
+
+        return result.stream()
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private List<String> findDiffBlocks(List<String> sourceBlocks, List<String> targetBlocks) {
@@ -129,7 +132,8 @@ public class SyncService {
 
         List<String> diff = new ArrayList<>();
         for (String source : sourceBlocks) {
-            if (!targetMerged.contains(normalizeStrict(source))) {
+            String normSource = normalizeStrict(source);
+            if (!targetMerged.contains(normSource)) {
                 diff.add(source);
             }
         }
