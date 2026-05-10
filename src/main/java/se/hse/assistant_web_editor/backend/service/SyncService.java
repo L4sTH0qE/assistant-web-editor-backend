@@ -46,10 +46,11 @@ public class SyncService {
 
             String externalTitle = doc.select("h1").text();
 
-            String externalBody = doc.select(".post__text").text();
-            if (externalBody.isEmpty()) {
-                externalBody = doc.select(".post__content, .builder-section, .tab-content").text();
+            org.jsoup.nodes.Element extBodyEl = doc.selectFirst(".post__text");
+            if (extBodyEl == null) {
+                extBodyEl = doc.selectFirst(".post__content, .builder-section, .tab-content");
             }
+            String externalBody = extractTextSafely(extBodyEl);
 
             String internalTitle = page.getTitle() != null ? page.getTitle() : "";
             StringBuilder internalBuilder = new StringBuilder();
@@ -64,7 +65,8 @@ public class SyncService {
                     if ("text".equals(block.getType())) {
                         String html = (String) block.getProps().get("content");
                         if (html != null && !html.isBlank()) {
-                            internalBuilder.append(Jsoup.parse(html).text()).append(" ");
+                            Document parsedHtml = Jsoup.parseBodyFragment(html);
+                            internalBuilder.append(extractTextSafely(parsedHtml.body())).append(" ");
                         }
                     }
                 }
@@ -147,5 +149,27 @@ public class SyncService {
             nGrams.add(sb.toString().trim());
         }
         return nGrams;
+    }
+
+    private String extractTextSafely(org.jsoup.nodes.Element element) {
+        if (element == null) return "";
+
+        String blockSelectors = "p, div, h1, h2, h3, h4, h5, h6, li, figcaption, .fotorama-bottom_caption, .fotorama__copyright";
+
+        for (org.jsoup.nodes.Element el : element.select(blockSelectors)) {
+            String ownText = el.ownText().trim();
+            if (!ownText.isEmpty() && !ownText.matches(".*[.!?]$")) {
+                el.append(" . ");
+            }
+        }
+
+        for (org.jsoup.nodes.Element br : element.select("br")) {
+            br.replaceWith(new org.jsoup.nodes.TextNode(" . "));
+        }
+
+        String text = element.text();
+        text = text.replaceAll("(\\s*\\.\\s*)+", ". ");
+
+        return text.trim();
     }
 }
