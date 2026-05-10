@@ -13,6 +13,7 @@ import se.hse.assistant_web_editor.backend.service.PageService;
 import se.hse.assistant_web_editor.backend.service.SyncService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/pages")
@@ -151,5 +152,18 @@ public class PageController {
     @GetMapping("/versions/{versionId}")
     public ResponseEntity<List<BlockData>> getVersionBlocks(@PathVariable Long versionId) {
         return ResponseEntity.ok(pageService.getVersionBlocks(versionId));
+    }
+
+    /// Endpoint for parsing Person page.
+    ///
+    /// @param request Map with url of person page to parse.
+    /// @return ResponseEntity containing person's name and photo url.
+    @PostMapping("/parse-person")
+    public ResponseEntity<Map<String, String>> parsePerson(@RequestBody Map<String, String> request) {
+        Map<String, String> result = pageService.parsePerson(request.get("url"));
+        if (result.containsKey("error")) {
+            return ResponseEntity.badRequest().body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 }

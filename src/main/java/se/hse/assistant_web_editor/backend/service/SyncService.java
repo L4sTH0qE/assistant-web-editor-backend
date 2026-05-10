@@ -10,12 +10,10 @@ import se.hse.assistant_web_editor.backend.dto.SyncReportDto;
 import se.hse.assistant_web_editor.backend.model.BlockData;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/// Service for synchronization algorithm.
+/// Service for handling synchronization.
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -38,62 +36,56 @@ public class SyncService {
 
         try {
             Document doc = Jsoup.connect(externalUrl)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
                     .timeout(7000)
                     .get();
 
             doc.select("script, style, noscript, .ya-share2, .articleMeta, .header-board, .footer, .pk-menu, .header-top").remove();
+            doc.select(".fotorama--hidden, .fotorama__nav-wrap, .fotorama__caption, .fotorama__copyright, .fotorama-bottom_caption").remove();
 
             String externalTitle = doc.select("h1").text();
-
             org.jsoup.nodes.Element extBodyEl = doc.selectFirst(".post__text");
-            if (extBodyEl == null) {
-                extBodyEl = doc.selectFirst(".post__content, .builder-section, .tab-content");
-            }
-            String externalBody = extractTextSafely(extBodyEl);
+            if (extBodyEl == null) extBodyEl = doc.selectFirst(".post__content, .builder-section, .tab-content");
+
+            List<String> externalBlocks = extractBlocksSafely(extBodyEl);
 
             String internalTitle = page.getTitle() != null ? page.getTitle() : "";
-            StringBuilder internalBuilder = new StringBuilder();
+            List<String> internalBlocks = new ArrayList<>();
 
             String annotation = (String) page.getMetadata().get("annotation");
-            if (annotation != null && !annotation.isBlank()) {
-                internalBuilder.append(annotation).append(" ");
-            }
+            if (annotation != null && !annotation.isBlank()) internalBlocks.add(annotation);
 
             if (page.getBlocks() != null) {
                 for (BlockData block : page.getBlocks()) {
                     if ("text".equals(block.getType())) {
                         String html = (String) block.getProps().get("content");
                         if (html != null && !html.isBlank()) {
-                            Document parsedHtml = Jsoup.parseBodyFragment(html);
-                            internalBuilder.append(extractTextSafely(parsedHtml.body())).append(" ");
+                            internalBlocks.addAll(extractBlocksSafely(Jsoup.parseBodyFragment(html).body()));
                         }
+                    } else if ("person".equals(block.getType())) {
+                        internalBlocks.add((String) block.getProps().get("name"));
                     }
                 }
             }
-            String internalBody = internalBuilder.toString();
 
             boolean titleMatches = normalizeStrict(internalTitle).contains(normalizeStrict(externalTitle)) ||
                     normalizeStrict(externalTitle).contains(normalizeStrict(internalTitle));
 
-            double similarity = calculateJaccardSimilarity(internalBody, externalBody, 3);
-            int similarityPercent = (int) Math.round(similarity * 100);
+            List<String> missingOnWebsite = findDiffBlocks(internalBlocks, externalBlocks);
+            List<String> extraOnWebsite = findDiffBlocks(externalBlocks, internalBlocks);
 
-            List<String> missingOnWebsite = findDiffSentences(internalBody, externalBody);
-            List<String> extraOnWebsite = findDiffSentences(externalBody, internalBody);
+            int totalBlocks = Math.max(internalBlocks.size(), externalBlocks.size());
+            int similarityPercent = totalBlocks == 0 ? 100 : (int) Math.round((1.0 - (double) missingOnWebsite.size() / totalBlocks) * 100);
 
-            String status = (titleMatches && similarityPercent >= 90) ? "SYNCED" : "DESYNCED";
-
+            String status = (titleMatches && similarityPercent >= 90 && missingOnWebsite.isEmpty()) ? "SYNCED" : "DESYNCED";
             pageService.updateSyncStatus(pageId, status, LocalDateTime.now());
 
-            if ("SYNCED".equals(status)) {
-                pageService.markCurrentVersionAsSynced(pageId);
-            }
+            if ("SYNCED".equals(status)) pageService.markCurrentVersionAsSynced(pageId);
 
             return SyncReportDto.builder()
                     .status(status)
                     .titleMatch(titleMatches)
-                    .similarityPercent(similarityPercent)
+                    .similarityPercent(Math.max(0, similarityPercent))
                     .missingOnWebsite(missingOnWebsite)
                     .extraOnWebsite(extraOnWebsite)
                     .build();
@@ -104,16 +96,41 @@ public class SyncService {
         }
     }
 
-    private List<String> findDiffSentences(String source, String target) {
-        String normalizedTarget = normalizeStrict(target);
-        String[] sentences = source.split("(?<=[.!?])\\s+");
+    private List<String> extractBlocksSafely(org.jsoup.nodes.Element element) {
+        List<String> result = new ArrayList<>();
+        if (element == null) return result;
+
+        for (org.jsoup.nodes.Element img : element.select("img")) {
+            String alt = img.attr("alt").trim();
+            if (!alt.isEmpty()) result.add(alt);
+            img.remove();
+        }
+
+        for (org.jsoup.nodes.Element el : element.select("br, p, div, li, h1, h2, h3, h4, h5, h6, td")) {
+            el.append(" ||| ");
+        }
+
+        String rawText = element.text();
+        String[] chunks = rawText.split("\\|\\|\\|");
+
+        for (String chunk : chunks) {
+            String cleaned = chunk.trim();
+            if (cleaned.length() > 10 && !cleaned.contains("Подписаться на рассылку") && !cleaned.equals("НИУ ВШЭ")) {
+                result.add(cleaned);
+            }
+        }
+        return result.stream().distinct().collect(Collectors.toList());
+    }
+
+    private List<String> findDiffBlocks(List<String> sourceBlocks, List<String> targetBlocks) {
+        String targetMerged = targetBlocks.stream()
+                .map(this::normalizeStrict)
+                .collect(Collectors.joining(" "));
 
         List<String> diff = new ArrayList<>();
-        for (String s : sentences) {
-            if (s.trim().length() < 15) continue;
-            String normS = normalizeStrict(s);
-            if (!normalizedTarget.contains(normS)) {
-                diff.add(s.trim());
+        for (String source : sourceBlocks) {
+            if (!targetMerged.contains(normalizeStrict(source))) {
+                diff.add(source);
             }
         }
         return diff;
@@ -121,73 +138,5 @@ public class SyncService {
 
     private String normalizeStrict(String text) {
         return text.replaceAll("[^a-zA-Zа-яА-ЯёЁ0-9]", "").toLowerCase();
-    }
-
-    private double calculateJaccardSimilarity(String text1, String text2, int nGramSize) {
-        Set<String> nGrams1 = getNgrams(text1, nGramSize);
-        Set<String> nGrams2 = getNgrams(text2, nGramSize);
-
-        if (nGrams1.isEmpty() && nGrams2.isEmpty()) return 1.0;
-        if (nGrams1.isEmpty() || nGrams2.isEmpty()) return 0.0;
-
-        Set<String> intersection = new HashSet<>(nGrams1);
-        intersection.retainAll(nGrams2);
-
-        Set<String> union = new HashSet<>(nGrams1);
-        union.addAll(nGrams2);
-
-        return (double) intersection.size() / union.size();
-    }
-
-    private Set<String> getNgrams(String text, int n) {
-        String[] words = text.replaceAll("[^a-zA-Zа-яА-ЯёЁ0-9\\s]", "").toLowerCase().split("\\s+");
-        Set<String> nGrams = new HashSet<>();
-        if (words.length < n) return nGrams;
-        for (int i = 0; i <= words.length - n; i++) {
-            StringBuilder sb = new StringBuilder();
-            for (int j = 0; j < n; j++) sb.append(words[i + j]).append(" ");
-            nGrams.add(sb.toString().trim());
-        }
-        return nGrams;
-    }
-
-    private String extractTextSafely(org.jsoup.nodes.Element element) {
-        if (element == null) return "";
-
-        for (org.jsoup.nodes.Element img : element.select("img")) {
-            String alt = img.attr("alt");
-            String title = img.attr("title");
-            StringBuilder imgText = new StringBuilder(" ");
-
-            if (!alt.isBlank()) {
-                imgText.append(alt).append(" . ");
-            }
-            if (!title.isBlank() && !title.equals(alt)) {
-                imgText.append(title).append(" . ");
-            }
-
-            if (!imgText.toString().isBlank()) {
-                img.after(new org.jsoup.nodes.TextNode(imgText.toString()));
-            }
-        }
-
-        String blockSelectors = "p, div, h1, h2, h3, h4, h5, h6, li, figcaption, " +
-                ".fotorama-bottom_caption, .fotorama__copyright, .fotorama__caption__wrap";
-
-        for (org.jsoup.nodes.Element el : element.select(blockSelectors)) {
-            String ownText = el.ownText().trim();
-            if (!ownText.isEmpty() && !ownText.matches(".*[.!?]$")) {
-                el.append(" . ");
-            }
-        }
-
-        for (org.jsoup.nodes.Element br : element.select("br")) {
-            br.replaceWith(new org.jsoup.nodes.TextNode(" . "));
-        }
-
-        String text = element.text();
-        text = text.replaceAll("(\\s*\\.\\s*)+", ". ");
-
-        return text.trim();
     }
 }
