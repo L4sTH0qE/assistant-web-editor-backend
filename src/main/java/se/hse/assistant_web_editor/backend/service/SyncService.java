@@ -154,7 +154,25 @@ public class SyncService {
     private String extractTextSafely(org.jsoup.nodes.Element element) {
         if (element == null) return "";
 
-        String blockSelectors = "p, div, h1, h2, h3, h4, h5, h6, li, figcaption, .fotorama-bottom_caption, .fotorama__copyright";
+        for (org.jsoup.nodes.Element img : element.select("img")) {
+            String alt = img.attr("alt");
+            String title = img.attr("title");
+            StringBuilder imgText = new StringBuilder(" ");
+
+            if (!alt.isBlank()) {
+                imgText.append(alt).append(" . ");
+            }
+            if (!title.isBlank() && !title.equals(alt)) {
+                imgText.append(title).append(" . ");
+            }
+
+            if (!imgText.toString().isBlank()) {
+                img.after(new org.jsoup.nodes.TextNode(imgText.toString()));
+            }
+        }
+
+        String blockSelectors = "p, div, h1, h2, h3, h4, h5, h6, li, figcaption, " +
+                ".fotorama-bottom_caption, .fotorama__copyright, .fotorama__caption__wrap";
 
         for (org.jsoup.nodes.Element el : element.select(blockSelectors)) {
             String ownText = el.ownText().trim();
