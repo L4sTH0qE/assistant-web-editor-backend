@@ -78,7 +78,7 @@ public class SyncService {
             int totalParagraphs = Math.max(internalParagraphs.size(), externalParagraphs.size());
             int similarityPercent = totalParagraphs == 0 ? 100 : (int) Math.round((1.0 - (double) missingOnWebsite.size() / totalParagraphs) * 100);
 
-            String status = (titleMatches && similarityPercent >= 95 && missingOnWebsite.isEmpty()) ? "SYNCED" : "DESYNCED";
+            String status = (titleMatches && similarityPercent >= 90 && missingOnWebsite.isEmpty()) ? "SYNCED" : "DESYNCED";
             pageService.updateSyncStatus(pageId, status, LocalDateTime.now());
 
             if ("SYNCED".equals(status)) pageService.markCurrentVersionAsSynced(pageId);
@@ -106,7 +106,7 @@ public class SyncService {
         for (Element img : element.select("img")) {
             String alt = img.attr("alt").trim();
             if (!alt.isEmpty()) result.add(alt);
-            img.remove(); // Удаляем саму картинку, чтобы не мешала
+            img.remove();
         }
 
         for (Element el : element.select("p, h1, h2, h3, h4, h5, h6, li")) {
