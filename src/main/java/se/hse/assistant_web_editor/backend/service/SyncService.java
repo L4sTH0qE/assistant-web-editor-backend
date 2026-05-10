@@ -48,23 +48,23 @@ public class SyncService {
             Element extBodyEl = doc.selectFirst(".post__text");
             if (extBodyEl == null) extBodyEl = doc.selectFirst(".post__content, .builder-section, .tab-content");
 
-            List<String> externalBlocks = extractBlocksSafely(extBodyEl);
+            List<String> externalParagraphs = extractGranularParagraphs(extBodyEl);
 
             String internalTitle = page.getTitle() != null ? page.getTitle() : "";
-            List<String> internalBlocks = new ArrayList<>();
+            List<String> internalParagraphs = new ArrayList<>();
 
             String annotation = (String) page.getMetadata().get("annotation");
-            if (annotation != null && !annotation.isBlank()) internalBlocks.add(annotation.trim());
+            if (annotation != null && !annotation.isBlank()) internalParagraphs.add(annotation.trim());
 
             if (page.getBlocks() != null) {
                 for (BlockData block : page.getBlocks()) {
                     if ("text".equals(block.getType())) {
                         String html = (String) block.getProps().get("content");
                         if (html != null && !html.isBlank()) {
-                            internalBlocks.addAll(extractBlocksSafely(Jsoup.parseBodyFragment(html).body()));
+                            internalParagraphs.addAll(extractGranularParagraphs(Jsoup.parseBodyFragment(html).body()));
                         }
                     } else if ("person".equals(block.getType())) {
-                        internalBlocks.add(((String) block.getProps().get("name")).trim());
+                        internalParagraphs.add(((String) block.getProps().get("name")).trim());
                     }
                 }
             }
@@ -72,13 +72,13 @@ public class SyncService {
             boolean titleMatches = normalizeStrict(internalTitle).contains(normalizeStrict(externalTitle)) ||
                     normalizeStrict(externalTitle).contains(normalizeStrict(internalTitle));
 
-            List<String> missingOnWebsite = findDiffBlocks(internalBlocks, externalBlocks);
-            List<String> extraOnWebsite = findDiffBlocks(externalBlocks, internalBlocks);
+            List<String> missingOnWebsite = findDiffParagraphs(internalParagraphs, externalParagraphs);
+            List<String> extraOnWebsite = findDiffParagraphs(externalParagraphs, internalParagraphs);
 
-            int totalBlocks = Math.max(internalBlocks.size(), externalBlocks.size());
-            int similarityPercent = totalBlocks == 0 ? 100 : (int) Math.round((1.0 - (double) missingOnWebsite.size() / totalBlocks) * 100);
+            int totalParagraphs = Math.max(internalParagraphs.size(), externalParagraphs.size());
+            int similarityPercent = totalParagraphs == 0 ? 100 : (int) Math.round((1.0 - (double) missingOnWebsite.size() / totalParagraphs) * 100);
 
-            String status = (titleMatches && similarityPercent >= 90 && missingOnWebsite.isEmpty()) ? "SYNCED" : "DESYNCED";
+            String status = (titleMatches && similarityPercent >= 95 && missingOnWebsite.isEmpty()) ? "SYNCED" : "DESYNCED";
             pageService.updateSyncStatus(pageId, status, LocalDateTime.now());
 
             if ("SYNCED".equals(status)) pageService.markCurrentVersionAsSynced(pageId);
@@ -97,26 +97,32 @@ public class SyncService {
         }
     }
 
-    private List<String> extractBlocksSafely(Element element) {
+    private List<String> extractGranularParagraphs(Element element) {
         List<String> result = new ArrayList<>();
         if (element == null) return result;
+
+        element.select("figcaption").remove();
 
         for (Element img : element.select("img")) {
             String alt = img.attr("alt").trim();
             if (!alt.isEmpty()) result.add(alt);
-            img.remove();
+            img.remove(); // Удаляем саму картинку, чтобы не мешала
         }
+
         for (Element el : element.select("p, h1, h2, h3, h4, h5, h6, li")) {
             String text = el.text().trim();
-            if (text.length() > 5 && !text.contains("Подписаться на рассылку") && !text.equals("НИУ ВШЭ")) {
+            if (text.length() > 5 && !text.contains("Подписаться на рассылку") && !text.equals("НИУ ВШЭ") && !text.contains("ОПТИМИЗИРОВАТЬ")) {
                 result.add(text);
             }
             el.remove();
         }
 
         String leftoverText = element.text().trim();
-        if (leftoverText.length() > 5 && !leftoverText.contains("Подписаться на рассылку")) {
-            result.add(leftoverText);
+        if (leftoverText.length() > 5 && !leftoverText.contains("Подписаться на рассылку") && !leftoverText.equals("НИУ ВШЭ") && !leftoverText.contains("ОПТИМИЗИРОВАТЬ")) {
+            String[] leftovers = leftoverText.split("(?<=[.!?])\\s+");
+            for (String piece : leftovers) {
+                if (piece.trim().length() > 5) result.add(piece.trim());
+            }
         }
 
         return result.stream()
@@ -125,13 +131,13 @@ public class SyncService {
                 .collect(Collectors.toList());
     }
 
-    private List<String> findDiffBlocks(List<String> sourceBlocks, List<String> targetBlocks) {
-        String targetMerged = targetBlocks.stream()
+    private List<String> findDiffParagraphs(List<String> sourceParagraphs, List<String> targetParagraphs) {
+        String targetMerged = targetParagraphs.stream()
                 .map(this::normalizeStrict)
                 .collect(Collectors.joining(" "));
 
         List<String> diff = new ArrayList<>();
-        for (String source : sourceBlocks) {
+        for (String source : sourceParagraphs) {
             String normSource = normalizeStrict(source);
             if (!targetMerged.contains(normSource)) {
                 diff.add(source);
